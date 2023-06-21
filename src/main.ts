@@ -23,28 +23,37 @@ function serve() {
       response.setHeader('Content-Type', 'text/plain');
       response.end('Please send a POST request.');
     } else {
-      let url = new URL('http://127.0.0.1:9292' + request.url);
-      let type = url.searchParams.get('type');
-      let tex = url.searchParams.get('tex');
+      let body = '';
+      request.on('data', (data)=>(body += data));
+      request.on('end', function()
+      {
+          let post = JSON.parse(body);
+          let type = post['type'] ?? 'tikzcd';
+          let option = post['option'] ?? '';
+          let tex = post['tex'] ?? '';
 
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'text/plain');
-
-      if (type === 'tikzpicture' || type === 'tikzcd') {
-        console.log(`[${getTimestamp()}] Accepted.`);
-        let start = new Date().valueOf();
-
-        let code = `\\begin{${type}}${tex}\\end{${type}}`;
-
-        runWorker(code).then((result) => {
           response.statusCode = 200;
-          response.end(result.svg);
+          response.setHeader('Content-Type', 'text/plain');
 
-          console.log(`[${getTimestamp()}] Resolved (${new Date().valueOf() - start} ms)`);
-        });
-      } else {
-        response.end('');
-      }
+          if (type === 'tikzpicture' || type === 'tikzcd') 
+          {
+              console.log(`[${getTimestamp()}] Accepted.`);
+              let start = new Date().valueOf();
+    
+              let code = `\\begin{${type}}[${option}]${tex}\\end{${type}}`;
+    
+              runWorker(code).then((result) => {
+              response.statusCode = 200;
+              response.end(result.svg);
+    
+              console.log(`[${getTimestamp()}] Resolved (${new Date().valueOf() - start} ms)`);
+              });
+          } 
+          else 
+          {
+              response.end('');
+          }
+      });
     }
   });
 
